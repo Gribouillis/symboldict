@@ -52,7 +52,7 @@ if __name__ == '__main__':
         name='symboldict',
         license='MIT license',
         version="{ver}".format(ver=version_git),
-        author='Eric Ringeisen'
+        author='Eric Ringeisen',
         description='A dict class to organize and lazily import symbols',
         long_description=long_description,
         url="https://github.com/Gribouillis/symboldict",
