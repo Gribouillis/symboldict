@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division,
 
 from importlib import import_module
 import sys
+from .version import __version__
 
 # sublime singleton from the python decorator library
 
