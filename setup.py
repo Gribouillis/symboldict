@@ -43,7 +43,7 @@ dependency_links = [
 ]
 
 long_description = (
-    codecs.open(os.path.join(dirname, "README.rst"),
+    codecs.open(os.path.join(os.path.dirname(__file__), "README.rst"),
                 encoding="utf-8").read() 
 )
 
