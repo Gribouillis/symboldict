@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to symboldict’s documentation! &mdash; symboldict 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="symboldict 0.1 documentation" href="#" />
+    <link rel="next" title="symboldict package" href="symboldict.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="symboldict.html" title="symboldict package"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">symboldict 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-symboldict-s-documentation">
+<h1>Welcome to symboldict&#8217;s documentation!<a class="headerlink" href="#welcome-to-symboldict-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="symboldict.html">symboldict package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="symboldict.html#module-symboldict">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="symboldict">
+<h1>Symboldict<a class="headerlink" href="#symboldict" title="Permalink to this headline">¶</a></h1>
+<p>Organize symbols and load them lazily</p>
+<div class="section" id="install-symboldict">
+<h2>Install symboldict<a class="headerlink" href="#install-symboldict" title="Permalink to this headline">¶</a></h2>
+<p>python 2:</p>
+<div class="highlight-text"><div class="highlight"><pre>pip install symboldict
+</pre></div>
+</div>
+<p>python 3:</p>
+<div class="highlight-text"><div class="highlight"><pre>pip3 install symboldict
+</pre></div>
+</div>
+</div>
+<div class="section" id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>The symboldict module implements a dictionary type containing symbolic
+references to python objects in the hierarchy of importable
+modules or builtins objects. Examples of symbolic references are
+<tt class="docutils literal"><span class="pre">'os.path.isdir'</span></tt>, <tt class="docutils literal"><span class="pre">'telnetlib.Telnet'</span></tt>, <tt class="docutils literal"><span class="pre">'complex.conjugate'</span></tt> etc.
+References to user-defined objects are equally easy.</p>
+<p>The module implements a lazy loading mechanism for these symbols, which
+means that a dictionary can contain symbols from many different modules
+without importing any of these modules until this import becomes necessary
+in user code.</p>
+<p>Symboldicts are meant to favor loose coupling between different parts
+of an application. For example three modules <tt class="docutils literal"><span class="pre">A,</span> <span class="pre">B,</span> <span class="pre">C</span></tt> may share a
+common symboldict <tt class="docutils literal"><span class="pre">sy</span></tt> instead of importing each others symbols
+directly. <tt class="docutils literal"><span class="pre">A</span></tt> and <tt class="docutils literal"><span class="pre">B</span></tt> can use method <tt class="docutils literal"><span class="pre">sy.func()</span></tt> instead of
+function <tt class="docutils literal"><span class="pre">C.func()</span></tt>, thus decreasing the knowledge that each module
+possesses about other modules.</p>
+</div>
+<div class="section" id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="symboldict-objects">
+<h3>SymbolDict objects<a class="headerlink" href="#symboldict-objects" title="Permalink to this headline">¶</a></h3>
+<p>A <tt class="docutils literal"><span class="pre">SymbolDict</span></tt>, or dictionary of symbols, is typically created by
+a statement similar to</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span> <span class="o">=</span> <span class="n">SymbolDict</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">isfile</span><span class="o">=</span><span class="n">symbol</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">Telnet</span><span class="o">=</span><span class="n">symbol</span><span class="o">.</span><span class="n">telnetlib</span><span class="o">.</span><span class="n">Telnet</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">conju</span><span class="o">=</span><span class="n">symbol</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">conjugate</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">eggs</span><span class="o">=</span><span class="n">symbol</span><span class="o">.</span><span class="n">spam</span><span class="o">.</span><span class="n">eggs</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is a regular dictionary, which keys are arbitrary but which values
+are instances of a new type <tt class="docutils literal"><span class="pre">Symbol</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span>
+<span class="go">SymbolDict({&#39;eggs&#39;: Symbol(&#39;spam.eggs&#39;), &#39;isfile&#39;: Symbol(&#39;os.path.isfile&#39;), ...})</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">sy</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>The usual dictionary operations apply:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">[</span><span class="s">&#39;isfile&#39;</span><span class="p">]</span>
+<span class="go">Symbol(&#39;os.path.isfile&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">[</span><span class="s">&#39;eggs&#39;</span><span class="p">]</span>
+<span class="go">Symbol(&#39;spam.eggs&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">[</span><span class="s">&#39;Parser&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s">&#39;argparse.ArgumentParser&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s">&#39;Telnet&#39;</span> <span class="ow">in</span> <span class="n">sy</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Attribute access is overloaded for symboldicts.
+It supplies a lazy access to the value symbolically represented by
+the <tt class="docutils literal"><span class="pre">Symbol</span></tt> instance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="o">.</span><span class="n">isfile</span>
+<span class="go">&lt;function isfile at 0x7f7fd0f40050&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="o">.</span><span class="n">Telnet</span>
+<span class="go">&lt;class &#39;telnetlib.Telnet at 0x7fbb3a518db8&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="o">.</span><span class="n">conju</span>
+<span class="go">&lt;method &#39;conjugate&#39; of &#39;complex&#39; objects&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="o">.</span><span class="n">eggs</span>
+<span class="go">Traceback (most recent call last)</span>
+<span class="go">    ...</span>
+<span class="go">ImportError: No module named spam</span>
+</pre></div>
+</div>
+<p>This syntax enables user code to manipulate the <tt class="docutils literal"><span class="pre">SymbolDict</span></tt>
+instance as if it was a module containing python variables
+available through qualified names. Actual modules are imported
+only when it is necessary to do so.</p>
+<p>The values of these variables can also be obtained by the following
+alternative expression,
+which handles the case where the dictionary keys are not
+character strings or where they are existing attribute names of the
+<tt class="docutils literal"><span class="pre">dict</span></tt> class (such as <tt class="docutils literal"><span class="pre">'update'</span></tt> or <tt class="docutils literal"><span class="pre">'clear'</span></tt>):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">()</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(</span><span class="s">&#39;isfile&#39;</span><span class="p">)</span>
+<span class="go">&lt;function isfile at 0x7f7fd0f40050&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">()</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(</span><span class="s">&#39;Parser&#39;</span><span class="p">)</span>
+<span class="go">&lt;class &#39;argparse.ArgumentParser&#39;&gt;</span>
+</pre></div>
+</div>
+<p>The call syntax <tt class="docutils literal"><span class="pre">sy()</span></tt> should be stressed here. Calling a
+<tt class="docutils literal"><span class="pre">SymbolDict</span></tt> instance returns a special lightweight adapter
+having the type <tt class="docutils literal"><span class="pre">SymbolDictControl</span></tt>. Direct methods cannot
+be called on symboldicts because the attribute operator is overloaded.</p>
+</div>
+<div class="section" id="symbol-objects">
+<h3>Symbol objects<a class="headerlink" href="#symbol-objects" title="Permalink to this headline">¶</a></h3>
+<p>Symbol objects (used as values in <tt class="docutils literal"><span class="pre">SymbolDict</span></tt> instances) wrap a
+dot-separated path to a python object, which may exist or not, for example</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s">&#39;wave.Error&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s">&#39;complex.conjugate&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s">&#39;spam.ham.eggs&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Attribute access is overloaded to allow building other instances
+with the dot syntax</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">Symbol</span><span class="p">(</span><span class="s">&#39;spam&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">ham</span><span class="o">.</span><span class="n">eggs</span>
+<span class="go">Symbol(&#39;spam.ham.eggs&#39;)</span>
+</pre></div>
+</div>
+<p>A special instance named <tt class="docutils literal"><span class="pre">symbol</span></tt> is defined, which
+value is <tt class="docutils literal"><span class="pre">Symbol('')</span></tt>. Its path is empty, and it permits
+expressions such as</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">Error</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">conjugate</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">spam</span><span class="o">.</span><span class="n">ham</span><span class="o">.</span><span class="n">eggs</span>
+</pre></div>
+</div>
+<p>which produce the same result as above.</p>
+<p>Defining an instance does <em>not</em> trigger an attempt
+to retrieve the indicated python object by importing modules or
+accessing attributes. However, standalone <tt class="docutils literal"><span class="pre">Symbol</span></tt> instances
+have the ability to fetch this object by calling
+the <tt class="docutils literal"><span class="pre">getvalue()</span></tt> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="p">()</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+<span class="go">&lt;class &#39;wave.Error&#39;&gt;</span>
+</pre></div>
+</div>
+<p>Again, the call syntax <tt class="docutils literal"><span class="pre">a()</span></tt> enables to bypass the overloading of
+the attribute operator. It returns a special adapter having the type
+<tt class="docutils literal"><span class="pre">SymbolControl</span></tt>.</p>
+<p>A method <tt class="docutils literal"><span class="pre">hasvalue()</span></tt> indicates if a value can be obtained for
+the symbol&#8217;s path. Unlike <tt class="docutils literal"><span class="pre">getvalue()</span></tt>, it does not raise an exception
+when there is no value:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">symbol</span><span class="o">.</span><span class="n">spam</span><span class="o">.</span><span class="n">ham</span><span class="p">()</span><span class="o">.</span><span class="n">hasvalue</span><span class="p">()</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>This method also exists for symboldicts. It may raise <tt class="docutils literal"><span class="pre">KeyError</span></tt> if
+the  key is missing in the dictionary:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sy</span><span class="p">()</span><span class="o">.</span><span class="n">hasvalue</span><span class="p">(</span><span class="s">&#39;conju&#39;</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p>This software is licensed under the <a class="reference external" href="http://en.wikipedia.org/wiki/MIT_License">MIT License</a></p>
+<p>© 2014 Eric Ringeisen</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to symboldict&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#symboldict">Symboldict</a><ul>
+<li><a class="reference internal" href="#install-symboldict">Install symboldict</a></li>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
+<li><a class="reference internal" href="#symboldict-objects">SymbolDict objects</a></li>
+<li><a class="reference internal" href="#symbol-objects">Symbol objects</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#license">License</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="symboldict.html"
+                        title="next chapter">symboldict package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="symboldict.html" title="symboldict package"
+             >next</a> |</li>
+        <li><a href="#">symboldict 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Eric Ringeisen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

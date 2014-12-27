@@ -1,0 +1,722 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>symboldict &mdash; symboldict 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="symboldict 0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">symboldict 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for symboldict</h1><div class="highlight"><pre>
+<span class="c"># -*-coding: utf8-*-</span>
+<span class="sd">&quot;&quot;&quot;symboldict module</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="p">(</span><span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span>
+                        <span class="n">print_function</span><span class="p">,</span> <span class="n">unicode_literals</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">import_module</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">__version__</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;0.1&#39;</span>
+
+<span class="c"># sublime singleton from the python decorator library</span>
+
+<div class="viewcode-block" id="singleton"><a class="viewcode-back" href="../symboldict.html#symboldict.singleton">[docs]</a><span class="k">def</span> <span class="nf">singleton</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class decorator which creates a unique callable instance&quot;&quot;&quot;</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">cls</span><span class="p">()</span>
+    <span class="n">instance</span><span class="o">.</span><span class="n">__call__</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">instance</span>
+    <span class="k">return</span> <span class="n">instance</span>
+</div>
+<span class="nd">@singleton</span>
+<span class="k">class</span> <span class="nc">_VOID_VALUE</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="k">return</span> <span class="s">&#39;_VOID_VALUE()&#39;</span>
+   
+<span class="n">_VOID_VALUE</span> <span class="o">=</span> <span class="n">_VOID_VALUE</span>
+<span class="sd">&quot;&quot;&quot;Default value for a :class:`Symbol` before its value is loaded&quot;&quot;&quot;</span>
+
+
+<span class="nd">@singleton</span>
+<span class="k">class</span> <span class="nc">_FAIL_VALUE</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="s">&#39;_FAIL_VALUE()&#39;</span>
+
+<span class="n">_FAIL_VALUE</span> <span class="o">=</span> <span class="n">_FAIL_VALUE</span>
+<span class="sd">&quot;&quot;&quot;Default value for of a :class:`Symbol` for which loading a value failed&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="VoidValueError"><a class="viewcode-back" href="../symboldict.html#symboldict.VoidValueError">[docs]</a><span class="k">class</span> <span class="nc">VoidValueError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span> <span class="k">pass</span>
+</div>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+    <span class="n">Enum</span> <span class="o">=</span> <span class="nb">object</span>
+    <span class="n">_isrule</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">__contains__</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+    <span class="n">_isrule</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Rule</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Rule"><a class="viewcode-back" href="../symboldict.html#symboldict.Rule">[docs]</a><span class="k">class</span> <span class="nc">Rule</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Enumerated rules for :meth:`SymbolControl.getvalue()`.</span>
+<span class="sd">    </span>
+<span class="sd">    The available values are</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        Rule.DONT_LOAD</span>
+<span class="sd">        Rule.TRY_LOAD_ONCE</span>
+<span class="sd">        Rule.TRY_LOAD_EACH</span>
+<span class="sd">        Rule.FORCE_RELOAD</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">DONT_LOAD</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">TRY_LOAD_ONCE</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">TRY_LOAD_EACH</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">FORCE_RELOAD</span> <span class="o">=</span> <span class="mi">3</span>
+</div>
+<span class="n">_DOT</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Symbol"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol">[docs]</a><span class="k">class</span> <span class="nc">Symbol</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Symbol(*parts) -&gt; new Symbol instance</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        parts(convertibles to str): A sequence of :class:`str` or objects</span>
+<span class="sd">            convertible to :class:`str`. These strings are joined by :code:`&#39;.&#39;` to</span>
+<span class="sd">            create the instance&#39;s path.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; Symbol(&#39;spam.ham&#39;, &#39;eggs&#39;)</span>
+<span class="sd">        Symbol(&#39;spam.ham.eggs&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; Symbol()</span>
+<span class="sd">        Symbol(&#39;&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; Symbol(None, 12)</span>
+<span class="sd">        Symbol(&#39;None.12&#39;)</span>
+<span class="sd">    </span>
+<span class="sd">    This is the type of objects used as values in :class:`SymbolDict`</span>
+<span class="sd">    instances. Their role is mainly to wrap a dot-separated path to a python</span>
+<span class="sd">    object, which may exist or not, with a convenient interface.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; Symbol(&#39;os.path.isfile&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; Symbol(&#39;telnetlib.Telnet&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; Symbol(&#39;complex.conjugate&#39;)</span>
+<span class="sd">    </span>
+<span class="sd">    Defining an instance does *not* trigger an attempt to retrieve the</span>
+<span class="sd">    indicated python object by importing modules or accessing attributes.</span>
+<span class="sd">    This is the role of the :meth:`SymbolControl.getvalue` or</span>
+<span class="sd">    :meth:`SymbolDict.__getattr__` methods.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;_path&quot;</span><span class="p">,</span> <span class="s">&quot;_value&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">parts</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;x.__init__(...) initializes x; see help(type(x)) for signature&quot;&quot;&quot;</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_DOT</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+        <span class="n">Symbol</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_VOID_VALUE</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Symbol.__getattribute__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__getattribute__">[docs]</a>    <span class="k">def</span> <span class="nf">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overridden attribute access creates a new :class:`Symbol`.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            attr(str): new path element</span>
+<span class="sd">            </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; Symbol(&#39;spam&#39;).eggs</span>
+<span class="sd">            Symbol(&#39;spam.eggs&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Symbol</span><span class="p">(</span><span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">attr</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Symbol.__call__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calling a :class:`Symbol` instance wraps it into a :class:`SymbolControl` object.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            SymbolControl: a lightweight object wrapping the :class:`Symbol`.</span>
+<span class="sd">            </span>
+<span class="sd">        This allows to bypass the overloading of the dot operator to</span>
+<span class="sd">        access some methods.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; s = Symbol(&#39;os.path.isfile&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; s().getvalue()</span>
+<span class="sd">            &lt;function isfile at ...&gt;</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SymbolControl</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Symbol.__setattr__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__setattr__">[docs]</a>    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Attribute setting is disabled for :class:`Symbol` instances.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            TypeError: this exception is always raised.</span>
+<span class="sd">            </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; s = Symbol(&#39;spam&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; s.ham = &#39;eggs&#39;</span>
+<span class="sd">            Traceback ...</span>
+<span class="sd">            TypeError: Attribute setting is disabled for Symbol instances</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Attribute setting is disabled for Symbol instances&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Symbol.__str__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__str__">[docs]</a>    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Converting a :class:`Symbol` to :class:`str` returns the wrapped path.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: the string stored in the Symbol instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; s = Symbol(&#39;spam.ham&#39;).eggs</span>
+<span class="sd">            &gt;&gt;&gt; s</span>
+<span class="sd">            Symbol(&#39;spam.ham.eggs&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; str(s)</span>
+<span class="sd">            &#39;spam.ham.eggs&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        
+        </div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;Symbol({})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+    
+<div class="viewcode-block" id="Symbol.__eq__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Equality relation with another instance.</span>
+<span class="sd">        </span>
+<span class="sd">        A :class:`Symbol` :code:`x` is equal to a python object :code:`y` if</span>
+<span class="sd">        they have the same type and the same path.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; x = Symbol(&#39;spam.ham&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; y = Symbol(&#39;spam.ham&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; x == y</span>
+<span class="sd">            True</span>
+<span class="sd">            &gt;&gt;&gt; x == &#39;spam.ham&#39;</span>
+<span class="sd">            False</span>
+<span class="sd">            </span>
+<span class="sd">        The relations :code:`!=, &lt;, &gt;, &lt;=, &gt;=` are defined as well.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="n">_cid</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">_getpath</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="n">_getpath</span><span class="p">(</span><span class="n">other</span><span class="p">))</span></div>
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__le__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">&gt;</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">_cid</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="n">_cid</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">_getpath</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">_getpath</span><span class="p">(</span><span class="n">other</span><span class="p">)))</span>
+    <span class="k">def</span> <span class="nf">__ge__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">&lt;</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">_cid</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="n">_cid</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">_getpath</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">_getpath</span><span class="p">(</span><span class="n">other</span><span class="p">)))</span>
+<div class="viewcode-block" id="Symbol.__hash__"><a class="viewcode-back" href="../symboldict.html#symboldict.Symbol.__hash__">[docs]</a>    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes a hash value for the Symbol instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            int: the instance&#39;s hash value</span>
+<span class="sd">            </span>
+<span class="sd">        :class:`Symbol` instances are hashable objects which</span>
+<span class="sd">        can be used as dictionary keys or as set elements.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; S = set([Symbol(&#39;spam.ham&#39;), Symbol(&#39;eggs&#39;)])</span>
+<span class="sd">            &gt;&gt;&gt; Symbol(&#39;eggs&#39;) in S</span>
+<span class="sd">            True</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="n">_cid</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">_getpath</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+</div></div>
+<span class="n">_getpath</span> <span class="o">=</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__get__</span>
+<span class="k">def</span> <span class="nf">_cid</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">id</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="c"># cannot use .__class__</span>
+
+<span class="n">symbol</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">()</span>
+<span class="sd">&quot;&quot;&quot;An instance of :class:`Symbol` with empty path.</span>
+
+<span class="sd">Used to build other Symbols by the means of attribute access.</span>
+
+<span class="sd">Example:</span>
+<span class="sd">    &gt;&gt;&gt; symbol.spam.ham</span>
+<span class="sd">    Symbol(&#39;spam.ham&#39;)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SymbolControl"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolControl">[docs]</a><span class="k">class</span> <span class="nc">SymbolControl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SymbolControl(symb) -&gt; new SymbolControl instance</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        symb(Symbol): a symbol referenced by the SymbolControl object</span>
+<span class="sd">        </span>
+<span class="sd">    This is a class of lightweight wrappers around :class:`Symbol` instances</span>
+<span class="sd">    used to bypass the overriding of the dot operator in this class.</span>
+<span class="sd">    SymbolControl objects are returned by the :meth:`Symbol.__call__()`</span>
+<span class="sd">    method. Their main purpose is to hold methods to manipulate Symbols.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; s = Symbol(&#39;os.path.isfile&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; s()</span>
+<span class="sd">        &lt;symboldict.SymbolControl object ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; s().hasvalue()</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; s().path()</span>
+<span class="sd">        &#39;os.path.isfile&#39;</span>
+<span class="sd">        &gt;&gt;&gt; s().getvalue()</span>
+<span class="sd">        &lt;function isfile ...&gt;</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;__symb&#39;</span><span class="p">,)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symb</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;x.__init__(...) initializes x; see help(type(x)) for signature&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__symb</span> <span class="o">=</span> <span class="n">symb</span>
+
+<div class="viewcode-block" id="SymbolControl.hasvalue"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolControl.hasvalue">[docs]</a>    <span class="k">def</span> <span class="nf">hasvalue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">Rule</span><span class="o">.</span><span class="n">TRY_LOAD_ONCE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a boolean indicating if a value is available for the python object referenced symbolically by this instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            rule(Rule): a rule specifying how to obtain the object&#39;s value.</span>
+<span class="sd">                It defaults to ``Rule.TRY_LOAD_ONCE``.</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: a boolean indicating if a value is available for this instance.</span>
+
+<span class="sd">        This method returns True if the corresponding call to :meth:`getvalue()`</span>
+<span class="sd">        would succeed, and returns False if the call to :meth:`getvalue()` would</span>
+<span class="sd">        fail. In any case, it does not raise an exception.</span>
+<span class="sd">        </span>
+<span class="sd">        The rule argument has the same meaning as in :meth:`Symbol.getvalue()`.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; a = Symbol(&#39;wave.Error&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; a().hasvalue()</span>
+<span class="sd">            True</span>
+<span class="sd">            &gt;&gt;&gt; b = Symbol(&#39;spam.ham&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; b().hasvalue()</span>
+<span class="sd">            False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">rule</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="SymbolControl.getvalue"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolControl.getvalue">[docs]</a>    <span class="k">def</span> <span class="nf">getvalue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">Rule</span><span class="o">.</span><span class="n">TRY_LOAD_ONCE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Attempts to return the python object referenced symbolically by this instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            rule(Rule): a rule specifying how to obtain the object&#39;s value.</span>
+<span class="sd">                It defaults to ``Rule.TRY_LOAD_ONCE``.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            any: a python object referenced by this instance,</span>
+<span class="sd">                if such a value can be found.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception</span>
+<span class="sd">                met while trying to</span>
+<span class="sd">                obtain the value when it does not exist.</span>
+<span class="sd">        </span>
+<span class="sd">        This method tries to obtain a value by importing modules and taking</span>
+<span class="sd">        attributes according to the dotted path of the contained :class:`Symbol`</span>
+<span class="sd">        instance. In this path, the word before the first dot can be the</span>
+<span class="sd">        name of an importable module or that of a builtin python object</span>
+<span class="sd">        in the `__builtins__` dictionnary.</span>
+<span class="sd">        </span>
+<span class="sd">        If the object can not be  found, an exception is raised.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; a = Symbol(&#39;wave.Error&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; a().getvalue()</span>
+<span class="sd">            &lt;class &#39;wave.Error&#39;&gt;</span>
+<span class="sd">            </span>
+<span class="sd">        The `rule` parameter can be used to specify the policy</span>
+<span class="sd">        with respect to value search. The possible values are</span>
+<span class="sd">        </span>
+<span class="sd">        - ``Rule.TRY_LOAD_ONCE`` (default rule) The value</span>
+<span class="sd">            is searched once and stored in the ``Symbol`` instance. Subsequent</span>
+<span class="sd">            calls to ``getvalue()`` return the same value without trying</span>
+<span class="sd">            to reload the symbol. If the first search fails, subsequent</span>
+<span class="sd">            calls will fail without attempting to search the value.</span>
+<span class="sd">            This rule handles most lazy import cases because symbol values</span>
+<span class="sd">            in imported modules usually don&#39;t vary. For example there is</span>
+<span class="sd">            no need to search the symbol ``Symbol(&#39;telnetlib.Telnet&#39;)``</span>
+<span class="sd">            more than once. This is a per-instance policy, which means that</span>
+<span class="sd">            a different instance with the same path will trigger a second search.</span>
+<span class="sd">            </span>
+<span class="sd">        - ``Rule.DONT_LOAD`` With this rule, there is no attempt to get</span>
+<span class="sd">            the symbol&#39;s value through imports or attribute accesses. It</span>
+<span class="sd">            means that the call will succeed only if a value was previously</span>
+<span class="sd">            found by a call to ``getvalue()`` or ``hasvalue()`` with a different</span>
+<span class="sd">            rule.</span>
+<span class="sd">            </span>
+<span class="sd">        - ``Rule.FORCE_RELOAD`` With this rule, an attempt is made to load</span>
+<span class="sd">            the symbol through imports and attribute access. It can be used</span>
+<span class="sd">            to handle cases where a variable changes in an imported module.</span>
+<span class="sd">            There is no attempt to reload imported modules.</span>
+<span class="sd">            </span>
+<span class="sd">        - ``Rule.TRY_LOAD_EACH`` With this rule, an attempt is made to load</span>
+<span class="sd">            the symbol&#39;s value only if the previous attempts failed</span>
+<span class="sd">            to obtain a value.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_isrule</span><span class="p">(</span><span class="n">rule</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">((</span><span class="s">&#39;Need symboldict.Rule,&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">rule</span><span class="p">),</span> <span class="s">&#39;found&#39;</span><span class="p">))</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rule</span> <span class="ow">is</span> <span class="n">Rule</span><span class="o">.</span><span class="n">DONT_LOAD</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">_VOID_VALUE</span><span class="p">,</span> <span class="n">_FAIL_VALUE</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">VoidValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">v</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="n">_VOID_VALUE</span> <span class="ow">or</span> <span class="n">rule</span> <span class="ow">is</span> <span class="n">Rule</span><span class="o">.</span><span class="n">FORCE_RELOAD</span> 
+                <span class="ow">or</span> <span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="n">_FAIL_VALUE</span> <span class="ow">and</span> <span class="n">rule</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">Rule</span><span class="o">.</span><span class="n">TRY_LOAD_ONCE</span><span class="p">)):</span>
+            <span class="c"># we must try to load</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">)</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+            <span class="n">acc</span> <span class="o">=</span> <span class="n">L</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c"># may raise ValueError if s is empty string</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                    <span class="c"># this section may raise AttributeError for example</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">__builtins__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">L</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">_VOID_VALUE</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="n">_VOID_VALUE</span><span class="p">:</span>
+                        <span class="k">raise</span>
+                    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">L</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                        <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">L</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                        <span class="n">acc</span> <span class="o">=</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">_DOT</span> <span class="o">+</span> <span class="n">attr</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                            <span class="n">v</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">Symbol</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">,</span> <span class="n">_FAIL_VALUE</span><span class="p">)</span>
+                <span class="k">raise</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Symbol</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">v</span>
+        <span class="k">elif</span> <span class="n">v</span> <span class="ow">is</span> <span class="n">_FAIL_VALUE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">VoidValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">v</span>
+    </div>
+<div class="viewcode-block" id="SymbolControl.path"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolControl.path">[docs]</a>    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the path of the referenced :class:`Symbol` instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; s = Symbol(&#39;socket.socket&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; s().path()</span>
+<span class="sd">            &#39;socket.socket&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__symb</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="SymbolControl.symbol"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolControl.symbol">[docs]</a>    <span class="k">def</span> <span class="nf">symbol</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the referenced :class:`Symbol` instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; s = Symbol(&#39;socket.socket&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; s().symbol() is s</span>
+<span class="sd">            True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__symb</span>
+</div></div>
+<div class="viewcode-block" id="SymbolDict"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict">[docs]</a><span class="k">class</span> <span class="nc">SymbolDict</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SymbolDict() -&gt; new empty SymbolDict</span>
+<span class="sd">    SymbolDict(mapping) -&gt; new SymbolDict initiliazed from a mapping object&#39;s</span>
+<span class="sd">        (key, value) pairs. The values are converted to Symbol instances.</span>
+<span class="sd">    SymbolDict(iterable) -&gt; new SymbolDict initialized as if via::</span>
+<span class="sd">        d = SymbolDict()</span>
+<span class="sd">        for k, v in iterable:</span>
+<span class="sd">            d[k] = Symbol(v)</span>
+<span class="sd">    SymbolDict(**kwargs) -&gt; new SymbolDict initialized with the name=value pairs</span>
+<span class="sd">        in the keyword argument list.  For example:  SymbolDict(one=&#39;spam.eggs&#39;, two=&#39;os&#39;).</span>
+<span class="sd">        The values are converted to Symbol instances.</span>
+<span class="sd">        </span>
+<span class="sd">    SymbolDict is a subclass of :class:`dict`, which means that the usual</span>
+<span class="sd">    dict methods (clear, copy, get, items, keys, pop, popitem, setdefault,</span>
+<span class="sd">    update, values) apply. The main differences are</span>
+<span class="sd">    </span>
+<span class="sd">    - The dictionary values are :class:`Symbol` instances.</span>
+<span class="sd">    - Attribute access is overridden to obtain the symbols values,</span>
+<span class="sd">        see :meth:`SymbolDict.__getattr__()`.</span>
+<span class="sd">    - The dictionary is callable, see :meth:`SymbolDict.__call__()`</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; from symboldict import symbol, SymbolDict</span>
+<span class="sd">        &gt;&gt;&gt; sy = SymbolDict(</span>
+<span class="sd">        ...     isfile=symbol.os.path.isfile,</span>
+<span class="sd">        ...     Telnet=symbol.telnetlib.Telnet,</span>
+<span class="sd">        ...     conju=symbol.complex.conjugate,</span>
+<span class="sd">        ...     eggs=symbol.spam.eggs,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; sy[&#39;isfile&#39;]</span>
+<span class="sd">        Symbol(&#39;os.path.isfile&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; sy[&#39;eggs&#39;]</span>
+<span class="sd">        Symbol(&#39;spam.eggs&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; sy[&#39;Parser&#39;] = Symbol(&#39;argparse.ArgumentParser&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; &#39;Telnet&#39; in sy</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; sy.isfile</span>
+<span class="sd">        &lt;function isfile ...&#39;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; sy.Telnet</span>
+<span class="sd">        &lt;class &#39;telnetlib.Telnet ...&#39;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; sy.conju</span>
+<span class="sd">        &lt;method &#39;conjugate&#39; of &#39;complex&#39; objects&gt;</span>
+<span class="sd">        &gt;&gt;&gt; sy.eggs</span>
+<span class="sd">        Traceback ...</span>
+<span class="sd">        ImportError: No module named spam</span>
+<span class="sd">        &gt;&gt;&gt; sy().hasvalue(&#39;isfile&#39;)</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; sy().getvalue(&#39;Parser&#39;)</span>
+<span class="sd">        &lt;class &#39;argparse.ArgumentParser&#39;&gt;</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">instance</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;x.__init__(...) initializes x; see help(type(x)) for signature&quot;&quot;&quot;</span>
+        <span class="nb">dict</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    
+<div class="viewcode-block" id="SymbolDict.update"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;sy.update([E, ]**F) -&gt; None. Update SymbolDict ``sy`` from dict/iterable E and F.</span>
+<span class="sd">        - If E is present and has a .keys() method, then does: ``for k in E: sy[k] = Symbol(E[k])``</span>
+<span class="sd">        - If E is present and lacks a .keys() method, then does: ``for k, v in E: sy[k] = Symbol(v)``</span>
+<span class="sd">        - In either case, this is followed by: ``for k in F: sy[k] = Symbol(F[k])``</span>
+<span class="sd">        </span>
+<span class="sd">        The only difference with :meth:`dict.update()` is that values are converted</span>
+<span class="sd">        to :class:`Symbol` instances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+        </div>
+<div class="viewcode-block" id="SymbolDict.__setitem__"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict.__setitem__">[docs]</a>    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like :meth:`dict.__setitem__()` but converts value to :class:`Symbol`&quot;&quot;&quot;</span>
+        <span class="nb">dict</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="SymbolDict.setdefault"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict.setdefault">[docs]</a>    <span class="k">def</span> <span class="nf">setdefault</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like :meth:`dict.setdefault()` but converts value to :class:`Symbol`&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+        </div>
+<div class="viewcode-block" id="SymbolDict.__getattr__"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict.__getattr__">[docs]</a>    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Identical to ``self().getvalue(attr)`` but raises AttributeError if attr is not a dictionary key.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; sy = SymbolDict(isfile=&#39;os.path.isfile&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; sy.isfile</span>
+<span class="sd">            &lt;function isfile at ...&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span><span class="p">()</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="SymbolDict.__call__"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDict.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calling a :class:`SymbolDict` instance wraps it into a :class:`SymbolDictControl` object.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            SymbolDictControl: a lightweight object wrapping the :class:`SymbolDict`.</span>
+<span class="sd">            </span>
+<span class="sd">        This allows to bypass the overloading of the dot operator to</span>
+<span class="sd">        access some methods.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; sy = SymbolDict(isfile=&#39;os.path.isfile&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; sy().getvalue(&#39;isfile&#39;)</span>
+<span class="sd">            &lt;function isfile at ...&gt;</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SymbolDictControl</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    </div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;{}({})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="nb">dict</span><span class="o">.</span><span class="n">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="SymbolDictControl"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDictControl">[docs]</a><span class="k">class</span> <span class="nc">SymbolDictControl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SymbolDictControl(sy) -&gt; new SymbolDictControl instance</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        sy(SymbolDict): a symboldict referenced by the SymbolDictControl object</span>
+<span class="sd">        </span>
+<span class="sd">    This is a class of lightweight wrappers around :class:`SymbolDict` instances</span>
+<span class="sd">    used to bypass the overriding of the dot operator in this class.</span>
+<span class="sd">    SymbolDictControl objects are returned by the :meth:`SymbolDict.__call__()`</span>
+<span class="sd">    method. Their main purpose is to hold methods to manipulate Symbols</span>
+<span class="sd">    contained in the SymbolDict.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; sy = SymbolDict(isfile=&#39;os.path.isfile&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; sy()</span>
+<span class="sd">        &lt;symboldict.SymbolDictControl object ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; sy().hasvalue(&#39;isfile&#39;)</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; sy().getvalue(&#39;isfile&#39;)</span>
+<span class="sd">        &lt;function isfile ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; sy().symboldict() is sy</span>
+<span class="sd">        True</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;__dict&#39;</span><span class="p">,)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symboldict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;x.__init__(...) initializes x; see help(type(x)) for signature&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict</span> <span class="o">=</span> <span class="n">symboldict</span>
+
+<div class="viewcode-block" id="SymbolDictControl.getvalue"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDictControl.getvalue">[docs]</a>    <span class="k">def</span> <span class="nf">getvalue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">Rule</span><span class="o">.</span><span class="n">TRY_LOAD_ONCE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Attempts to return the python object referenced symbolically by the Symbol under the given key.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            key(hashable): one of the dictionary keys of the wrapped SymbolDict instance.</span>
+<span class="sd">            rule(Rule): a rule specifying how to obtain the object&#39;s value.</span>
+<span class="sd">                It defaults to ``Rule.TRY_LOAD_ONCE``.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            any: a python object referenced by this instance,</span>
+<span class="sd">                if such a value can be found.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception</span>
+<span class="sd">                met while trying to</span>
+<span class="sd">                obtain the value when it does not exist.</span>
+<span class="sd">                Also raises KeyError if the key is missing in the</span>
+<span class="sd">                underlying SymbolDict.</span>
+<span class="sd">        </span>
+<span class="sd">        This method tries to obtain a value by importing modules and taking</span>
+<span class="sd">        attributes according to the dotted path of the :class:`Symbol`</span>
+<span class="sd">        instance ``self.symboldict()[key]``. In this path, the word</span>
+<span class="sd">        before the first dot can be the</span>
+<span class="sd">        name of an importable module or that of a builtin python object</span>
+<span class="sd">        in the `__builtins__` dictionnary.</span>
+<span class="sd">        </span>
+<span class="sd">        If the object can not be  found, an exception is raised.</span>
+<span class="sd">        </span>
+<span class="sd">        The ``rule`` argument has the same meaning as in</span>
+<span class="sd">        the :meth:`SymbolControl.getvalue()` method. See this method&#39;s</span>
+<span class="sd">        documentation for details.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; sy = SymbolDict(err=Symbol(&#39;wave.Error&#39;))</span>
+<span class="sd">            &gt;&gt;&gt; sy().getvalue(&#39;err&#39;)</span>
+<span class="sd">            &lt;class &#39;wave.Error&#39;&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">rule</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SymbolDictControl.hasvalue"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDictControl.hasvalue">[docs]</a>    <span class="k">def</span> <span class="nf">hasvalue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">Rule</span><span class="o">.</span><span class="n">TRY_LOAD_ONCE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a boolean indicating if a value is available for the python object referenced symbolically by the symbol under this key.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            key(hashable): one of the dictionary keys of the wrapped SymbolDict</span>
+<span class="sd">            rule(Rule): a rule specifying how to obtain the object&#39;s value.</span>
+<span class="sd">                It defaults to ``Rule.TRY_LOAD_ONCE``.</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: a boolean indicating if a value is available for this key.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            KeyError: if the key is missing.</span>
+
+<span class="sd">        If the key is missing in the wrapped SymbolDict, this method raises</span>
+<span class="sd">        a KeyError exception, otherwise, it returns True if the corresponding</span>
+<span class="sd">        call to :meth:`getvalue()`</span>
+<span class="sd">        would succeed, and returns False if the call to :meth:`getvalue()` would</span>
+<span class="sd">        fail.</span>
+<span class="sd">        </span>
+<span class="sd">        The rule argument has the same meaning as in :meth:`Symbol.getvalue()`.</span>
+<span class="sd">        See this method&#39;s documentation for details.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; sy = SymbolDict(err=&#39;wave.Error&#39;, ham=&#39;spam.ham&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; sy().hasvalue(&#39;err&#39;)</span>
+<span class="sd">            True</span>
+<span class="sd">            &gt;&gt;&gt; sy().hasvalue(&#39;ham&#39;)</span>
+<span class="sd">            False</span>
+<span class="sd">            &gt;&gt;&gt; sy().hasvalue(&#39;eggs&#39;)</span>
+<span class="sd">            Traceback ...</span>
+<span class="sd">            KeyError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span><span class="o">.</span><span class="n">hasvalue</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">rule</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SymbolDictControl.symboldict"><a class="viewcode-back" href="../symboldict.html#symboldict.SymbolDictControl.symboldict">[docs]</a>    <span class="k">def</span> <span class="nf">symboldict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the wrapped SymbolDict instance&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">symboldict 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Eric Ringeisen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

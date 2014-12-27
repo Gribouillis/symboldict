@@ -19,6 +19,8 @@ develop-eggs
 lib
 lib64
 __pycache__
+grib
+.kateproject.d
 
 # Installer logs
 pip-log.txt
@@ -45,3 +47,4 @@ local.py
 .baelfire.*
 *.flag
 flags
+.kateproject
