@@ -3,6 +3,8 @@
 Symboldict
 ==========
 
+`Package documentation <http://symboldict.readthedocs.org>`__
+
 Organize symbols and load them lazily
 
 Install symboldict

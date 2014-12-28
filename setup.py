@@ -12,7 +12,7 @@ version_py = os.path.join(os.path.dirname(__file__),
                           'src', 'symboldict', 'version.py')
 
 try:
-    version_git = subprocess.check_output(["git", "describe"]).strip()
+    version_git = subprocess.check_output(["git", "describe"]).strip().split('-')[0]
 except:
     with open(version_py, 'r') as fh:
         version_git = (open(version_py).read()

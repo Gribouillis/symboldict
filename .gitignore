@@ -21,6 +21,7 @@ lib64
 __pycache__
 grib
 .kateproject.d
+docs/_build
 
 # Installer logs
 pip-log.txt

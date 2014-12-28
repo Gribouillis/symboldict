@@ -1,5 +1,7 @@
 ## Symboldict
 
+[Package documentation](http://symboldict.readthedocs.org)
+
 Organize symbols and load them lazily
 
 ### Install symboldict
