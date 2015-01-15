@@ -8,30 +8,6 @@ from importlib import import_module
 import sys
 from .version import __version__
 
-# sublime singleton from the python decorator library
-
-def singleton(cls):
-    """Class decorator which creates a unique callable instance"""
-    instance = cls()
-    instance.__call__ = lambda: instance
-    return instance
-
-@singleton
-class _VOID_VALUE(object):
-    def __repr__(self):
-       return '_VOID_VALUE()'
-   
-_VOID_VALUE = _VOID_VALUE
-"""Default value for a :class:`Symbol` before its value is loaded"""
-
-
-@singleton
-class _FAIL_VALUE(object):
-    def __repr__(self): return '_FAIL_VALUE()'
-
-_FAIL_VALUE = _FAIL_VALUE
-"""Default value for of a :class:`Symbol` for which loading a value failed"""
-
 class VoidValueError(ValueError): pass
 
 if sys.version_info < (3, 4):
@@ -56,6 +32,11 @@ class Rule(Enum):
     TRY_LOAD_ONCE = 1
     TRY_LOAD_EACH = 2
     FORCE_RELOAD = 3
+    
+_DONT = Rule.DONT_LOAD
+_EACH = Rule.TRY_LOAD_EACH
+_FORCE = Rule.FORCE_RELOAD
+_ONCE = Rule.TRY_LOAD_ONCE
 
 _DOT = str('.')
 
@@ -89,14 +70,15 @@ class Symbol(object):
     This is the role of the :meth:`SymbolControl.getvalue` or
     :meth:`SymbolDict.__getattr__` methods.
     """
-    __slots__ = ("_path", "_value")
+    __slots__ = ("_path", "_has", "_val")
 
     def __init__(self, *parts):
         """x.__init__(...) initializes x; see help(type(x)) for signature"""
         parts = [str(x) for x in parts]
         s = _DOT.join(x for x in parts if x)
-        Symbol._path.__set__(self, s)
-        Symbol._value.__set__(self, _VOID_VALUE)
+        _storpath(self, s)
+        _storhas(self, False)
+        _storval(self, False) # no failed load
 
     def __getattribute__(self, attr):
         """Overridden attribute access creates a new :class:`Symbol`.
@@ -155,11 +137,11 @@ class Symbol(object):
             >>> str(s)
             'spam.ham.eggs'
         """
-        return Symbol._path.__get__(self)
+        return _readpath(self)
         
         
     def __repr__(self):
-        return "Symbol({})".format(repr(Symbol._path.__get__(self)))
+        return "Symbol({})".format(repr(_readpath(self)))
     
     def __eq__(self, other):
         """Equality relation with another instance.
@@ -177,19 +159,19 @@ class Symbol(object):
             
         The relations :code:`!=, <, >, <=, >=` are defined as well.
         """
-        return (_cid(self) == _cid(other)) and (_getpath(self) == _getpath(other))
+        return (_cid(self) == _cid(other)) and (_readpath(self) == _readpath(other))
     def __ne__(self, other):
         return not (self == other)
     def __le__(self, other):
         return not (self > other)
     def __lt__(self, other):
         return (_cid(self) < _cid(other)) or (
-            (_cid(self) == _cid(other)) and (_getpath(self) < _getpath(other)))
+            (_cid(self) == _cid(other)) and (_readpath(self) < _readpath(other)))
     def __ge__(self, other):
         return not (self < other)
     def __gt__(self, other):
         return (_cid(self) > _cid(other)) or (
-            (_cid(self) == _cid(other)) and (_getpath(self) > _getpath(other)))
+            (_cid(self) == _cid(other)) and (_readpath(self) > _readpath(other)))
     def __hash__(self):
         """Computes a hash value for the Symbol instance.
         
@@ -205,9 +187,15 @@ class Symbol(object):
             True
 
         """
-        return hash((_cid(self), _getpath(self)))
+        return hash((_cid(self), _readpath(self)))
 
-_getpath = Symbol._path.__get__
+_readpath = Symbol._path.__get__
+_storpath = Symbol._path.__set__
+_readhas = Symbol._has.__get__
+_storhas = Symbol._has.__set__
+_readval = Symbol._val.__get__
+_storval = Symbol._val.__set__
+
 def _cid(obj):
     return id(type(obj)) # cannot use .__class__
 
@@ -220,6 +208,73 @@ Example:
     >>> symbol.spam.ham
     Symbol('spam.ham')
 """
+
+def _getvalue(symb, rule):
+    """Attempts to return the python object referenced symbolically by this instance.
+    
+    Args:
+        rule(Rule): a rule specifying how to obtain the object's value.
+        
+    Returns:
+        any: a python object referenced by this instance,
+            if such a value can be found.
+    
+    Raises:
+        Exception
+            met while trying to
+            obtain the value when it does not exist.
+    
+    see :meth:`SymbolControl.getvalue()` for description.
+    """
+    #    must fetch ?
+    #            void    value    failed
+    #    ONCE    ?        Rtn       Exc
+    #    EACH    ?        Rtn       ?
+    #    DONT    Exc      Rtn       Exc
+    #    RELO    ?        ?         ?
+    if _readhas(symb):
+        if rule is _ONCE:
+            return _readval(symb)
+        elif rule is _DONT or rule is _EACH:
+            return _readval(symb)
+        # else fetch
+    elif (rule is _ONCE and _readval(symb)) or (rule is _DONT):
+        raise VoidValueError
+    # else fetch
+    # fetch starts here
+    if not _isrule(rule): # check only when load is needed
+        raise TypeError(('Need symboldict.Rule,', type(rule), 'found'))
+    try:
+        #... procedure -> v
+        # we try to load
+        L = _readpath(symb).split('.')
+        acc = L[0]
+        try:
+            # may raise ValueError if s is empty string
+            v = import_module(acc)
+        except ImportError:
+            # this section may raise AttributeError for example
+            if acc in __builtins__:
+                v = __builtins__[acc]
+            else:
+                raise
+            for attr in L[1:]:
+                v = getattr(v, attr)
+        else:
+            for attr in L[1:]:
+                acc = acc + _DOT + attr
+                try:
+                    v = getattr(v, attr)
+                except AttributeError:
+                    v = import_module(acc)
+    except Exception:
+        _storhas(symb, False)
+        _storval(symb, True) # FETCH FAILED
+        raise
+    else:
+        _storhas(symb, True)
+        _storval(symb, v)
+        return v
 
 class SymbolControl(object):
     """SymbolControl(symb) -> new SymbolControl instance
@@ -275,7 +330,7 @@ class SymbolControl(object):
             False
         """
         try:
-            self.getvalue(rule=rule)
+            _getvalue(self.__symb, rule)
         except Exception:
             return False
         else:
@@ -340,48 +395,7 @@ class SymbolControl(object):
             to obtain a value.
         
         """
-        if not _isrule(rule):
-            raise TypeError(('Need symboldict.Rule,', type(rule), 'found'))
-        v = Symbol._value.__get__(self.__symb)
-        if rule is Rule.DONT_LOAD:
-            if v in (_VOID_VALUE, _FAIL_VALUE):
-                raise VoidValueError(self.__symb)
-            else:
-                return v
-        elif (v is _VOID_VALUE or rule is Rule.FORCE_RELOAD 
-                or (v is _FAIL_VALUE and rule is not Rule.TRY_LOAD_ONCE)):
-            # we must try to load
-            s = str(self.__symb)
-            L = s.split(".")
-            acc = L[0]
-            try:
-                try:
-                    # may raise ValueError if s is empty string
-                    v = import_module(acc)
-                except ImportError:
-                    # this section may raise AttributeError for example
-                    v = __builtins__.get(L[0], _VOID_VALUE)
-                    if v is _VOID_VALUE:
-                        raise
-                    for attr in L[1:]:
-                        v = getattr(v, attr)
-                else:
-                    for attr in L[1:]:
-                        acc = acc + _DOT + attr
-                        try:
-                            v = getattr(v, attr)
-                        except AttributeError:
-                            v = import_module(acc)
-            except Exception:
-                Symbol._value.__set__(self.__symb, _FAIL_VALUE)
-                raise
-            else:
-                Symbol._value.__set__(self.__symb, v)
-                return v
-        elif v is _FAIL_VALUE:
-            raise VoidValueError(self.__symb)
-        else:
-            return v
+        return _getvalue(self.__symb, rule)
     
     def path(self):
         """Returns the path of the referenced :class:`Symbol` instance.
@@ -391,7 +405,7 @@ class SymbolControl(object):
             >>> s().path()
             'socket.socket'
         """
-        return Symbol._path.__get__(self.__symb)
+        return _readpath(self.__symb)
     
     def symbol(self):
         """Returns the referenced :class:`Symbol` instance.
@@ -402,6 +416,8 @@ class SymbolControl(object):
             True
         """
         return self.__symb
+    
+_dictga = dict.__getitem__
 
 class SymbolDict(dict):
     """SymbolDict() -> new empty SymbolDict
@@ -494,10 +510,12 @@ class SymbolDict(dict):
             >>> sy.isfile
             <function isfile at ...>
         """
-        v = self.get(attr, None)
-        if v is None:
+        try:
+            symb = _dictga(self, attr)
+        except KeyError:
             raise AttributeError(attr)
-        return v().getvalue()
+        else:
+            return _readval(symb) if _readhas(symb) else _getvalue(symb, _ONCE)
         
     def __call__(self):
         """Calling a :class:`SymbolDict` instance wraps it into a :class:`SymbolDictControl` object.
@@ -587,7 +605,7 @@ class SymbolDictControl(object):
             >>> sy().getvalue('err')
             <class 'wave.Error'>
         """
-        return self.__dict[key]().getvalue(rule=rule)
+        return _getvalue(self.__dict[key], rule)
 
     def hasvalue(self, key, rule=Rule.TRY_LOAD_ONCE):
         """Returns a boolean indicating if a value is available for the python object referenced symbolically by the symbol under this key.
@@ -622,7 +640,12 @@ class SymbolDictControl(object):
             Traceback ...
             KeyError
         """
-        return self.__dict[key]().hasvalue(rule=rule)
+        symb = self.__dict[key]
+        try:
+            _getvalue(symb, rule)
+            return True
+        except Exception:
+            return False
 
     def symboldict(self):
         """Returns the wrapped SymbolDict instance"""
