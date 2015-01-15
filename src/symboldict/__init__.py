@@ -470,7 +470,6 @@ class SymbolDict(dict):
         <class 'argparse.ArgumentParser'>
         
     """
-    __slots__ = ()
     
     def __new__(cls, *args, **kwargs):
         instance = dict.__new__(cls)
@@ -515,7 +514,10 @@ class SymbolDict(dict):
         except KeyError:
             raise AttributeError(attr)
         else:
-            return _readval(symb) if _readhas(symb) else _getvalue(symb, _ONCE)
+            value = _readval(symb) if _readhas(symb) else _getvalue(symb, _ONCE)
+            if attr not in _reserved:
+                self.__dict__[attr] = value
+            return value
         
     def __call__(self):
         """Calling a :class:`SymbolDict` instance wraps it into a :class:`SymbolDictControl` object.
@@ -537,6 +539,8 @@ class SymbolDict(dict):
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, dict.__repr__(self))
 
+_reserved = frozenset(dir(dict) + dir(SymbolDict))
+print(_reserved)
 
 class SymbolDictControl(object):
     """SymbolDictControl(sy) -> new SymbolDictControl instance
@@ -605,7 +609,15 @@ class SymbolDictControl(object):
             >>> sy().getvalue('err')
             <class 'wave.Error'>
         """
-        return _getvalue(self.__dict[key], rule)
+        try:
+            v = _getvalue(self.__dict[key], rule)
+            if key not in _reserved:
+                self.__dict.__dict__[key] = v
+            return v
+        except Exception:
+            if key in self.__dict.__dict__:
+                del self.__dict.__dict__[key]
+            raise
 
     def hasvalue(self, key, rule=Rule.TRY_LOAD_ONCE):
         """Returns a boolean indicating if a value is available for the python object referenced symbolically by the symbol under this key.
@@ -642,9 +654,13 @@ class SymbolDictControl(object):
         """
         symb = self.__dict[key]
         try:
-            _getvalue(symb, rule)
+            v = _getvalue(symb, rule)
+            if key not in _reserved:
+                self.__dict.__dict__[key] = v
             return True
         except Exception:
+            if key in self.__dict.__dict__:
+                del self.__dict.__dict__[key]
             return False
 
     def symboldict(self):
