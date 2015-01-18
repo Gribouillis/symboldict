@@ -26,7 +26,8 @@ class Tox(TestCommand):
 
 
 install_requires = [
-    
+    #'pytest',
+    #'pytest-bdd',
 ]
 dependency_links = [
     

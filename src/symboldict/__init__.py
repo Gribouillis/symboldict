@@ -4,9 +4,26 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import functools
 from importlib import import_module
 import sys
 from .version import __version__
+import warnings
+
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.
+    
+    ref:
+        https://wiki.python.org/moin/PythonDecoratorLibrary#Generating_Deprecation_Warnings
+    '''
+    @functools.wraps
+    def new_func(*args, **kwargs):
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning)
+        return func(*args, **kwargs)
+    return new_func
 
 class VoidValueError(ValueError): pass
 
@@ -419,7 +436,20 @@ class SymbolControl(object):
     
 _dictga = dict.__getitem__
 
-class SymbolDict(dict):
+class BaseSymbolDict(dict):
+    __slots__ = ('_strict',)
+    
+    def __new__(cls, *args, **kwargs):
+        instance = dict.__new__(cls)
+        return instance
+    
+    def __init__(self, *args, **kwargs):
+        """x.__init__(...) initializes x; see help(type(x)) for signature"""
+        dict.__init__(self)
+        self._strict = True
+        self.update(dict(*args, **kwargs))
+
+class SymbolDict(BaseSymbolDict):
     """SymbolDict() -> new empty SymbolDict
     SymbolDict(mapping) -> new SymbolDict initiliazed from a mapping object's
         (key, value) pairs. The values are converted to Symbol instances.
@@ -438,7 +468,6 @@ class SymbolDict(dict):
     - The dictionary values are :class:`Symbol` instances.
     - Attribute access is overridden to obtain the symbols values,
         see :meth:`SymbolDict.__getattr__()`.
-    - The dictionary is callable, see :meth:`SymbolDict.__call__()`
     
     Example:
         >>> from symboldict import symbol, SymbolDict
@@ -464,21 +493,23 @@ class SymbolDict(dict):
         >>> sy.eggs
         Traceback ...
         ImportError: No module named spam
-        >>> sy().hasvalue('isfile')
+        >>> sy.hasvalue('isfile')
         True
-        >>> sy().getvalue('Parser')
+        >>> sy.getvalue('Parser')
         <class 'argparse.ArgumentParser'>
         
     """
+
+    @property
+    def strict(self):
+        return self._strict
     
-    def __new__(cls, *args, **kwargs):
-        instance = dict.__new__(cls)
-        return instance
-    
-    def __init__(self, *args, **kwargs):
-        """x.__init__(...) initializes x; see help(type(x)) for signature"""
-        dict.__init__(self)
-        self.update(dict(*args, **kwargs))
+    @strict.setter
+    def strict(self, value):
+        value = bool(value)
+        if value and (not self._strict) and any(key in self for key in _reserved):
+            raise TypeError('Invalid key for strict SymbolDict')
+        self._strict = value
     
     def update(self, *args, **kwargs):
         """sy.update([E, ]**F) -> None. Update SymbolDict ``sy`` from dict/iterable E and F.
@@ -491,16 +522,34 @@ class SymbolDict(dict):
         """
         d = dict()
         d.update(*args, **kwargs)
+        if self.strict:
+            if len(d) < len(_reserved):
+                b = any(k in _reserved for k in d.keys())
+            else:
+                b = any(k in d for k in _reserved)
+            if b:
+                raise TypeError('Invalid key for strict SymbolDict')
         dict.update(self, [(k, Symbol(v)) for (k, v) in d.items()])
+        
         
     def __setitem__(self, k, v):
         """Like :meth:`dict.__setitem__()` but converts value to :class:`Symbol`"""
-        dict.__setitem__(self, k, Symbol(v))
+        if self._strict and k in _reserved:
+            raise TypeError(("Invalid key for strict SymbolDict", k))
+        dict.__setitem__(self, k, v if isinstance(v, Symbol) else Symbol(v))
+        self.__dict__.pop(k, None)
+        
+        
+    def __delitem__(self, k):
+        dict.__delitem__(self, k)
+        self.__dict__.pop(k, None)
+    
     
     def setdefault(self, k, v):
         """Like :meth:`dict.setdefault()` but converts value to :class:`Symbol`"""
         return dict.setdefault(self, k, Symbol(v))
-        
+    
+    
     def __getattr__(self, attr):
         """Identical to ``self().getvalue(attr)`` but raises AttributeError if attr is not a dictionary key.
         
@@ -518,59 +567,10 @@ class SymbolDict(dict):
             if attr not in _reserved:
                 self.__dict__[attr] = value
             return value
-        
-    def __call__(self):
-        """Calling a :class:`SymbolDict` instance wraps it into a :class:`SymbolDictControl` object.
-        
-        Returns:
-            SymbolDictControl: a lightweight object wrapping the :class:`SymbolDict`.
-            
-        This allows to bypass the overloading of the dot operator to
-        access some methods.
-        
-        Example:
-            >>> sy = SymbolDict(isfile='os.path.isfile')
-            >>> sy().getvalue('isfile')
-            <function isfile at ...>
-            
-        """
-        return SymbolDictControl(self)
     
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, dict.__repr__(self))
 
-_reserved = frozenset(dir(dict) + dir(SymbolDict))
-print(_reserved)
-
-class SymbolDictControl(object):
-    """SymbolDictControl(sy) -> new SymbolDictControl instance
-    
-    Args:
-        sy(SymbolDict): a symboldict referenced by the SymbolDictControl object
-        
-    This is a class of lightweight wrappers around :class:`SymbolDict` instances
-    used to bypass the overriding of the dot operator in this class.
-    SymbolDictControl objects are returned by the :meth:`SymbolDict.__call__()`
-    method. Their main purpose is to hold methods to manipulate Symbols
-    contained in the SymbolDict.
-    
-    Example:
-        >>> sy = SymbolDict(isfile='os.path.isfile')
-        >>> sy()
-        <symboldict.SymbolDictControl object ...>
-        >>> sy().hasvalue('isfile')
-        True
-        >>> sy().getvalue('isfile')
-        <function isfile ...>
-        >>> sy().symboldict() is sy
-        True
-
-    """
-    __slots__ = ('__dict',)
-
-    def __init__(self, symboldict):
-        """x.__init__(...) initializes x; see help(type(x)) for signature"""
-        self.__dict = symboldict
 
     def getvalue(self, key, rule=Rule.TRY_LOAD_ONCE):
         """Attempts to return the python object referenced symbolically by the Symbol under the given key.
@@ -588,12 +588,11 @@ class SymbolDictControl(object):
             Exception
                 met while trying to
                 obtain the value when it does not exist.
-                Also raises KeyError if the key is missing in the
-                underlying SymbolDict.
+                Also raises KeyError if the key is missing in this SymbolDict.
         
         This method tries to obtain a value by importing modules and taking
         attributes according to the dotted path of the :class:`Symbol`
-        instance ``self.symboldict()[key]``. In this path, the word
+        instance ``self[key]``. In this path, the word
         before the first dot can be the
         name of an importable module or that of a builtin python object
         in the `__builtins__` dictionnary.
@@ -606,24 +605,24 @@ class SymbolDictControl(object):
         
         Example:
             >>> sy = SymbolDict(err=Symbol('wave.Error'))
-            >>> sy().getvalue('err')
+            >>> sy.getvalue('err')
             <class 'wave.Error'>
         """
         try:
-            v = _getvalue(self.__dict[key], rule)
+            v = _getvalue(self[key], rule)
             if key not in _reserved:
-                self.__dict.__dict__[key] = v
+                self.__dict__[key] = v
             return v
         except Exception:
-            if key in self.__dict.__dict__:
-                del self.__dict.__dict__[key]
+            if key in self.__dict__:
+                del self.__dict__[key]
             raise
 
     def hasvalue(self, key, rule=Rule.TRY_LOAD_ONCE):
         """Returns a boolean indicating if a value is available for the python object referenced symbolically by the symbol under this key.
         
         Args:
-            key(hashable): one of the dictionary keys of the wrapped SymbolDict
+            key(hashable): one of the dictionary keys of this SymbolDict
             rule(Rule): a rule specifying how to obtain the object's value.
                 It defaults to ``Rule.TRY_LOAD_ONCE``.
                 
@@ -633,7 +632,7 @@ class SymbolDictControl(object):
         Raises:
             KeyError: if the key is missing.
 
-        If the key is missing in the wrapped SymbolDict, this method raises
+        If the key is missing in this SymbolDict, the method raises
         a KeyError exception, otherwise, it returns True if the corresponding
         call to :meth:`getvalue()`
         would succeed, and returns False if the call to :meth:`getvalue()` would
@@ -644,25 +643,41 @@ class SymbolDictControl(object):
         
         Example:
             >>> sy = SymbolDict(err='wave.Error', ham='spam.ham')
-            >>> sy().hasvalue('err')
+            >>> sy.hasvalue('err')
             True
-            >>> sy().hasvalue('ham')
+            >>> sy.hasvalue('ham')
             False
-            >>> sy().hasvalue('eggs')
+            >>> sy.hasvalue('eggs')
             Traceback ...
             KeyError
         """
-        symb = self.__dict[key]
         try:
+            symb = self[key]
             v = _getvalue(symb, rule)
             if key not in _reserved:
-                self.__dict.__dict__[key] = v
+                self.__dict__[key] = v
             return True
         except Exception:
-            if key in self.__dict.__dict__:
-                del self.__dict.__dict__[key]
+            if key in self.__dict__:
+                del self.__dict__[key]
             return False
-
+        
+    @deprecated
+    def __call__(self):
+        """Deprecated method. Returns the calling instance."""
+        return self
+    
+    @deprecated
     def symboldict(self):
-        """Returns the wrapped SymbolDict instance"""
-        return self.__dict
+        """Deprecated method. Returns the calling instance."""
+        return self
+
+_reserved = frozenset(dir(dict) + dir(SymbolDict) + ['_strict',])
+# print(_reserved)
+
+def LaxSymbolDict(*args, **kwd):
+    result = SymbolDict()
+    result.strict = False
+    result.update(dict(*args, **kwd))
+    assert result._strict is False
+    return result

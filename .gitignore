@@ -39,7 +39,6 @@ nosetests.xml
 .project
 .pydevproject
 tmpdata/*
-*.ini
 *.sublime-*
 htmlcov
 .ropeproject

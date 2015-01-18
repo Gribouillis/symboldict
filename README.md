@@ -1,5 +1,7 @@
 ## Symboldict
 
+Version 0.2.6
+
 [Package documentation](http://symboldict.readthedocs.org)
 
 Organize symbols and load them lazily
@@ -120,17 +122,58 @@ character strings or where they are existing attribute names of the
 
 
 ```Python
->>> sy().getvalue('isfile')
+>>> sy.getvalue('isfile')
 <function isfile at 0x7f7fd0f40050>
->>> sy().getvalue('Parser')
+>>> sy.getvalue('Parser')
 <class 'argparse.ArgumentParser'>
 
 ```
 
-The call syntax `sy()` should be stressed here. Calling a
-`SymbolDict` instance returns a special lightweight adapter
-having the type `SymbolDictControl`. Direct methods cannot
-be called on symboldicts because the attribute operator is overloaded.
+Previous versions of this module used a call syntax here, requiring
+expressions such as `sy().getvalue('isfile')`. Calling a
+`SymbolDict` instance is deprecated and currently returns
+the instance itself.
+
+*Special attributes*
+
+As of version 0.3.0, the valued loaded lazily, such as `sy.Telnet` above
+are stored in the instance's `__dict__` under the
+corresponding attribute. It means that subsequent accesses to these values
+have the efficiency of a simple attribute access.
+
+To avoid collisions with ordinary dict method names, SymbolDict will normally
+reject the use of a certain number of keys such as
+
+
+```
+
+  _strict     has_key     itervalues   keys      iterkeys     items
+  iteritems   viewkeys    hasvalue     update    fromkeys     clear
+  pop         viewitems   symboldict   popitem   setdefault   values
+  getvalue    strict      get          copy      viewvalues
+
+```
+
+and magic attribute names such as `__doc__` or `__setattr__`. Using
+one of these keys in a symboldict will raise a `TypeError` exception.
+
+This restriction on the keys can be removed by unsetting the `strict`
+property
+
+
+```
+
+sy.strict = False
+
+```
+
+It can also be removed at instantiation time by calling the
+`LaxSymbolDict`
+constructor instead of `SymbolDict`. For those lax symboldicts, forbidden
+keys such as `'popitem'` can be used, but the lazy access can only be
+obtained through
+the `getvalue()` method. Loaded values won't be added to the
+instance's `__dict__`.
 
 #### Symbol objects
 
@@ -183,9 +226,10 @@ the `getvalue()` method:
 
 ```
 
-Again, the call syntax `a()` enables to bypass the overloading of
+The call syntax `a()` enables to bypass the overloading of
 the attribute operator. It returns a special adapter having the type
-`SymbolControl`.
+`SymbolControl`. Method `getvalue()` cannot be called
+directly on the `Symbol` instance.
 
 A method `hasvalue()` indicates if a value can be obtained for
 the symbol's path. Unlike `getvalue()`, it does not raise an exception
@@ -203,7 +247,7 @@ the  key is missing in the dictionary:
 
 
 ```Python
->>> sy().hasvalue('conju')
+>>> sy.hasvalue('conju')
 True
 
 ```
@@ -212,5 +256,5 @@ True
 
 This software is licensed under the [MIT License](http://en.wikipedia.org/wiki/MIT_License)
 
-© 2014 Eric Ringeisen
+© 2014-2015 Eric Ringeisen
 
