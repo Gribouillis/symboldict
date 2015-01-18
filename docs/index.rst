@@ -17,7 +17,7 @@ Contents:
 Symboldict
 ==========
 
-Version 0.2.6
+Version 0.3.0
 
 `Package documentation <http://symboldict.readthedocs.org>`__
 
